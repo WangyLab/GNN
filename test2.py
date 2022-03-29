@@ -45,7 +45,7 @@ class BondEnergyDataset(gdata.InMemoryDataset):
         data_list = []
 
         for _, row in self.df.iterrows():
-            # x:用于储存每个节点的特征，shape:[num_nodes, num_code_features]
+            # x:用于储存每个节点的特征，shape:[num_nodes, num_node_features]
             # edge_index:用于储存节点之间的边，shape:[2, num_edges]
             # edge_attr:储存边的特征，shape:[num_edges, num_edge_features]
             x = torch.tensor(eval(row['Atoms']), dtype=torch.float)
@@ -100,12 +100,13 @@ class EdgeModel(nn.Module):
         # edge_attr: [E, F_e]
         # u: [B, F_u], where B is the number of graphs.
         # batch: [E] with max entry B - 1.
-        out = torch.cat([src, dest, edge_attr], 1)
+        out = torch.cat([src, dest, edge_attr], dim=1)
         return self.edge_mlp(out)
 
 
 class NodeModel(torch.nn.Module):
     def __init__(self, num_node_features, num_edge_features_out, out_features):
+        # num_edge_features_out为EdgeModel输出
         super(NodeModel, self).__init__()
         self.node_mlp_1 = Seq(Lin(num_node_features + num_edge_features_out, 256), ReLU(), Lin(256, 256), ReLU(),
                               Lin(256, 256))
@@ -149,6 +150,7 @@ def get_edge_batch_tensor(batch_size):
         arr.append(i)
         arr.append(i)
     return torch.tensor(arr, dtype=torch.long, device=device)
+# 由于原子之间建连接为无向图，所以要append两次
 edge_batch = get_edge_batch_tensor(batch_size)
 
 
